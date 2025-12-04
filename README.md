@@ -58,13 +58,34 @@ This project follows **Vertical Slice Architecture**:
 - Each feature contains its own endpoints, repositories, and components
 - Shared infrastructure in **Infrastructure/** folder
 
-## 📝 Development
+## 📝 Development Workflow
 
-This project uses [OpenSpec](openspec/AGENTS.md) for spec-driven development:
+This project uses **[OpenSpec](docs/openspec-workflow.md)** for spec-driven development:
 
-1. Check existing specs: `openspec list --specs`
-2. Create change proposals for new features
-3. Implement according to specifications
+### Quick Start
+```bash
+# List active change proposals
+openspec list
+
+# List existing specifications  
+openspec list --specs
+
+# Validate a change
+openspec validate [change-id] --strict
+```
+
+### When to Create Proposals
+- ✅ New features, breaking changes, architecture changes
+- ❌ Bug fixes, typos, config changes
+
+### Workflow
+1. Create proposal in `openspec/changes/[change-id]/`
+2. Write `proposal.md`, `tasks.md`, and spec deltas
+3. Validate with `openspec validate --strict`
+4. Get approval, then implement
+5. Archive after deployment
+
+See the [OpenSpec Workflow Guide](docs/openspec-workflow.md) for detailed instructions.
 
 ## 📄 License
 
