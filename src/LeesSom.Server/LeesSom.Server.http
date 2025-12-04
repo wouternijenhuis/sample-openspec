@@ -1,0 +1,6 @@
+@LeesSom.Server_HostAddress = http://localhost:5230
+
+GET {{LeesSom.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

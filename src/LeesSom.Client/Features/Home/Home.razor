@@ -1,0 +1,85 @@
+@page "/"
+
+<PageTitle>LeesSom - Fun Learning Games!</PageTitle>
+
+<!-- Floating Background Emojis -->
+<div class="floating-emojis">
+    <span class="floating-emoji">⭐</span>
+    <span class="floating-emoji">🎈</span>
+    <span class="floating-emoji">✨</span>
+    <span class="floating-emoji">🌟</span>
+    <span class="floating-emoji">🎉</span>
+    <span class="floating-emoji">💫</span>
+    <span class="floating-emoji">🦋</span>
+    <span class="floating-emoji">🌈</span>
+    <span class="floating-emoji">🎊</span>
+    <span class="floating-emoji">🚀</span>
+</div>
+
+<div class="home-container">
+    <div class="welcome-section">
+        <h1>
+            <span class="title-emoji left emoji-dance">🎮</span>
+            LeesSom
+            <span class="title-emoji right emoji-dance">🎮</span>
+        </h1>
+        <p class="subtitle">
+            <span class="emoji-bounce emoji-delay-1">✨</span>
+            Choose a fun game to play!
+            <span class="emoji-bounce emoji-delay-2">✨</span>
+        </p>
+    </div>
+
+    <div class="games-grid">
+        <div class="game-card arithmetic" @onclick="NavigateToArithmetic">
+            <span class="card-emoji-corner top-left emoji-float">⭐</span>
+            <span class="card-emoji-corner top-right emoji-float emoji-delay-2">🌟</span>
+            <div class="icon emoji-bounce">🔢</div>
+            <h2>Arithmetic <span class="emoji-wiggle">➕</span></h2>
+            <p>Practice your math skills with fun addition, subtraction, and more!</p>
+            <button class="btn-game btn-arithmetic">
+                Play Now! <span class="btn-emoji">🚀</span>
+            </button>
+            <span class="card-emoji-corner bottom-left emoji-float emoji-delay-3">✏️</span>
+            <span class="card-emoji-corner bottom-right emoji-float emoji-delay-4">🎯</span>
+        </div>
+
+        <div class="game-card topography" @onclick="NavigateToTopography">
+            <span class="card-emoji-corner top-left emoji-float">🗺️</span>
+            <span class="card-emoji-corner top-right emoji-float emoji-delay-2">🧭</span>
+            <div class="icon emoji-bounce">🌍</div>
+            <h2>Topography <span class="emoji-wiggle">🌎</span></h2>
+            <p>Explore the world! Learn about countries, capitals, and landmarks!</p>
+            <button class="btn-game btn-topography">
+                Play Now! <span class="btn-emoji">✈️</span>
+            </button>
+            <span class="card-emoji-corner bottom-left emoji-float emoji-delay-3">🏔️</span>
+            <span class="card-emoji-corner bottom-right emoji-float emoji-delay-4">🌊</span>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <span class="celebration-burst">
+            <span class="emoji-bounce">🎉</span>
+            <span class="emoji-bounce">🎊</span>
+            <span class="emoji-bounce">🎈</span>
+            <span class="emoji-bounce">🎁</span>
+            <span class="emoji-bounce">🥳</span>
+        </span>
+    </div>
+</div>
+
+@code {
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    private void NavigateToArithmetic()
+    {
+        Navigation.NavigateTo("/game/arithmetic");
+    }
+
+    private void NavigateToTopography()
+    {
+        Navigation.NavigateTo("/game/topography");
+    }
+}

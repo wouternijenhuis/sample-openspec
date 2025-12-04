@@ -1,0 +1,288 @@
+@page "/game/topography"
+
+<PageTitle>Topography Game - LeesSom</PageTitle>
+
+<!-- Floating Background Emojis -->
+<div class="floating-emojis">
+    <span class="floating-emoji">🌍</span>
+    <span class="floating-emoji">🌎</span>
+    <span class="floating-emoji">🌏</span>
+    <span class="floating-emoji">🗺️</span>
+    <span class="floating-emoji">🧭</span>
+    <span class="floating-emoji">✈️</span>
+    <span class="floating-emoji">🏔️</span>
+    <span class="floating-emoji">🌊</span>
+</div>
+
+<div class="home-container">
+    <div class="welcome-section">
+        <h1>
+            <span class="title-emoji left emoji-bounce">🌍</span>
+            Topography Game
+            <span class="title-emoji right emoji-bounce">🌍</span>
+        </h1>
+        <div class="score-display">
+            <span class="score-emoji emoji-spin">⭐</span> 
+            Score: @Score / @TotalQuestions
+            <span class="score-emoji emoji-spin">⭐</span>
+        </div>
+    </div>
+
+    @if (!GameOver)
+    {
+        <div class="question-card">
+            <span class="card-emoji-corner top-left emoji-float">🗺️</span>
+            <span class="card-emoji-corner top-right emoji-float emoji-delay-2">🧭</span>
+            <p class="question-text">@Question</p>
+            <span class="card-emoji-corner bottom-left emoji-float emoji-delay-3">🌎</span>
+            <span class="card-emoji-corner bottom-right emoji-float emoji-delay-4">✈️</span>
+        </div>
+
+        @if (IsCountingDown)
+        {
+            <div class="countdown-display">
+                <div class="countdown-number">@CountdownSeconds</div>
+                <p class="countdown-text">Think of the answer...</p>
+                <div class="countdown-emoji">🤔</div>
+            </div>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(Feedback))
+            {
+                <div class="feedback @(IsCorrect ? "success" : "error")">
+                    @if (IsCorrect)
+                    {
+                        <span class="celebration-burst">
+                            <span class="emoji-bounce">🎉</span>
+                            <span class="emoji-bounce emoji-delay-1">🌍</span>
+                            <span class="emoji-bounce emoji-delay-2">⭐</span>
+                        </span>
+                    }
+                    @Feedback
+                    @if (IsCorrect)
+                    {
+                        <span class="celebration-burst">
+                            <span class="emoji-bounce emoji-delay-3">✨</span>
+                            <span class="emoji-bounce emoji-delay-4">🎊</span>
+                        </span>
+                    }
+                </div>
+            }
+
+            <div class="games-grid" style="grid-template-columns: repeat(2, 1fr);">
+                @foreach (var answer in Answers)
+                {
+                    <button class="answer-btn @GetAnswerClass(answer)" 
+                            @onclick="() => CheckAnswer(answer)"
+                            disabled="@AnswerSelected">
+                        @answer
+                    </button>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="question-card game-over-card">
+            <span class="card-emoji-corner top-left emoji-dance">🎉</span>
+            <span class="card-emoji-corner top-right emoji-dance emoji-delay-2">🎊</span>
+            <h2 style="color: #333;">
+                <span class="emoji-bounce">🎉</span> 
+                Game Over! 
+                <span class="emoji-bounce emoji-delay-1">🎉</span>
+            </h2>
+            <p class="question-text">You got @Score out of @TotalQuestions correct!</p>
+            <p style="font-size: 1.5rem; color: #666;">
+                @if (Score == TotalQuestions)
+                {
+                    <span class="celebration-burst">
+                        <span class="emoji-dance">🏆</span>
+                        <span class="emoji-bounce">🌍</span>
+                        <span class="emoji-spin">🌟</span>
+                    </span>
+                    <span>Perfect score! You're a geography genius!</span>
+                    <span class="celebration-burst">
+                        <span class="emoji-spin">✨</span>
+                        <span class="emoji-bounce">🗺️</span>
+                        <span class="emoji-dance">👑</span>
+                    </span>
+                }
+                else if (Score >= TotalQuestions * 0.7)
+                {
+                    <span class="emoji-bounce">🗺️</span>
+                    <span>Great job! You know your world!</span>
+                    <span class="emoji-bounce emoji-delay-1">🗺️</span>
+                }
+                else
+                {
+                    <span class="emoji-pulse">🧭</span>
+                    <span>Good effort! Explore more!</span>
+                    <span class="emoji-pulse emoji-delay-1">🧭</span>
+                }
+            </p>
+            <button class="btn-game btn-topography" @onclick="StartNewGameAsync" style="margin-top: 1rem;">
+                Play Again! <span class="btn-emoji">🚀</span>
+            </button>
+            <button class="btn-game btn-arithmetic" @onclick="GoHome" style="margin-top: 1rem; margin-left: 1rem;">
+                Back Home <span class="btn-emoji">🏠</span>
+            </button>
+            <span class="card-emoji-corner bottom-left emoji-dance emoji-delay-3">🥳</span>
+            <span class="card-emoji-corner bottom-right emoji-dance emoji-delay-4">🎈</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    private string Question { get; set; } = "";
+    private List<string> Answers { get; set; } = [];
+    private string CorrectAnswer { get; set; } = "";
+    private int Score { get; set; }
+    private int CurrentQuestion { get; set; }
+    private int TotalQuestions { get; set; } = 10;
+    private bool GameOver { get; set; }
+    private string Feedback { get; set; } = "";
+    private bool IsCorrect { get; set; }
+    private bool AnswerSelected { get; set; }
+    private string? SelectedAnswer { get; set; }
+    private bool IsCountingDown { get; set; }
+    private int CountdownSeconds { get; set; }
+
+    private Random _random = new();
+
+    // Geography questions database
+    private readonly List<(string Question, string Answer, List<string> WrongAnswers)> _questions =
+    [
+        ("What is the capital of France?", "Paris", ["London", "Berlin", "Madrid"]),
+        ("What is the capital of Japan?", "Tokyo", ["Beijing", "Seoul", "Bangkok"]),
+        ("What is the capital of Australia?", "Canberra", ["Sydney", "Melbourne", "Brisbane"]),
+        ("What is the largest ocean?", "Pacific Ocean", ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean"]),
+        ("What is the longest river in the world?", "Nile", ["Amazon", "Mississippi", "Yangtze"]),
+        ("What is the capital of Brazil?", "Brasília", ["Rio de Janeiro", "São Paulo", "Buenos Aires"]),
+        ("What continent is Egypt in?", "Africa", ["Asia", "Europe", "South America"]),
+        ("What is the capital of Canada?", "Ottawa", ["Toronto", "Vancouver", "Montreal"]),
+        ("What is the capital of Italy?", "Rome", ["Milan", "Venice", "Florence"]),
+        ("What is the largest country in the world?", "Russia", ["Canada", "China", "United States"]),
+        ("What is the capital of Germany?", "Berlin", ["Munich", "Hamburg", "Frankfurt"]),
+        ("What ocean is between Europe and America?", "Atlantic Ocean", ["Pacific Ocean", "Indian Ocean", "Arctic Ocean"]),
+        ("What is the capital of Spain?", "Madrid", ["Barcelona", "Valencia", "Seville"]),
+        ("What mountain is the tallest in the world?", "Mount Everest", ["K2", "Kilimanjaro", "Mont Blanc"]),
+        ("What is the capital of the United Kingdom?", "London", ["Manchester", "Edinburgh", "Liverpool"]),
+        ("What is the capital of China?", "Beijing", ["Shanghai", "Hong Kong", "Guangzhou"]),
+        ("What desert is the largest in the world?", "Sahara", ["Gobi", "Kalahari", "Arabian"]),
+        ("What is the capital of the Netherlands?", "Amsterdam", ["Rotterdam", "The Hague", "Utrecht"]),
+        ("What is the capital of India?", "New Delhi", ["Mumbai", "Kolkata", "Bangalore"]),
+        ("What is the capital of Mexico?", "Mexico City", ["Cancun", "Guadalajara", "Monterrey"]),
+    ];
+
+    private List<int> _usedQuestions = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StartNewGameAsync();
+    }
+
+    private async Task StartNewGameAsync()
+    {
+        Score = 0;
+        CurrentQuestion = 0;
+        GameOver = false;
+        Feedback = "";
+        _usedQuestions = [];
+        await GenerateQuestionAsync();
+    }
+
+    private async Task GenerateQuestionAsync()
+    {
+        CurrentQuestion++;
+        AnswerSelected = false;
+        SelectedAnswer = null;
+        Feedback = "";
+
+        if (CurrentQuestion > TotalQuestions)
+        {
+            GameOver = true;
+            return;
+        }
+
+        // Get a random question that hasn't been used
+        int questionIndex;
+        do
+        {
+            questionIndex = _random.Next(_questions.Count);
+        } while (_usedQuestions.Contains(questionIndex) && _usedQuestions.Count < _questions.Count);
+
+        _usedQuestions.Add(questionIndex);
+
+        var selectedQuestion = _questions[questionIndex];
+        Question = selectedQuestion.Question;
+        CorrectAnswer = selectedQuestion.Answer;
+
+        var allAnswers = new List<string> { selectedQuestion.Answer };
+        allAnswers.AddRange(selectedQuestion.WrongAnswers);
+        Answers = allAnswers.OrderBy(_ => _random.Next()).ToList();
+
+        await StartCountdownAsync();
+    }
+
+    private async Task StartCountdownAsync()
+    {
+        IsCountingDown = true;
+        CountdownSeconds = 3;
+        StateHasChanged();
+
+        while (CountdownSeconds > 0)
+        {
+            await Task.Delay(1000);
+            CountdownSeconds--;
+            StateHasChanged();
+        }
+
+        IsCountingDown = false;
+        StateHasChanged();
+    }
+
+    private async Task CheckAnswer(string answer)
+    {
+        if (AnswerSelected) return;
+
+        AnswerSelected = true;
+        SelectedAnswer = answer;
+        IsCorrect = answer == CorrectAnswer;
+
+        if (IsCorrect)
+        {
+            Score++;
+            Feedback = "🎉 Correct! You're a geography star!";
+        }
+        else
+        {
+            Feedback = $"❌ Oops! The answer was {CorrectAnswer}";
+        }
+
+        await Task.Delay(1500);
+        await GenerateQuestionAsync();
+    }
+
+    private string GetAnswerClass(string answer)
+    {
+        if (!AnswerSelected) return "";
+        if (answer == SelectedAnswer)
+        {
+            return IsCorrect ? "correct" : "incorrect";
+        }
+        if (answer == CorrectAnswer)
+        {
+            return "correct";
+        }
+        return "";
+    }
+
+    private void GoHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

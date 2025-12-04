@@ -1,0 +1,290 @@
+@page "/game/arithmetic"
+
+<PageTitle>Arithmetic Game - LeesSom</PageTitle>
+
+<!-- Floating Background Emojis -->
+<div class="floating-emojis">
+    <span class="floating-emoji">➕</span>
+    <span class="floating-emoji">➖</span>
+    <span class="floating-emoji">✖️</span>
+    <span class="floating-emoji">➗</span>
+    <span class="floating-emoji">🔢</span>
+    <span class="floating-emoji">🧮</span>
+    <span class="floating-emoji">⭐</span>
+    <span class="floating-emoji">🌟</span>
+</div>
+
+<div class="home-container">
+    <div class="welcome-section">
+        <h1>
+            <span class="title-emoji left emoji-bounce">🔢</span>
+            Arithmetic Game
+            <span class="title-emoji right emoji-bounce">🔢</span>
+        </h1>
+        <div class="score-display">
+            <span class="score-emoji emoji-spin">⭐</span> 
+            Score: @Score / @TotalQuestions
+            <span class="score-emoji emoji-spin">⭐</span>
+        </div>
+    </div>
+
+    @if (!GameOver)
+    {
+        <div class="question-card">
+            <span class="card-emoji-corner top-left emoji-float">🧠</span>
+            <span class="card-emoji-corner top-right emoji-float emoji-delay-2">💡</span>
+            <p class="question-text">@Question</p>
+            <span class="card-emoji-corner bottom-left emoji-float emoji-delay-3">📐</span>
+            <span class="card-emoji-corner bottom-right emoji-float emoji-delay-4">✏️</span>
+        </div>
+
+        @if (IsCountingDown)
+        {
+            <div class="countdown-display">
+                <div class="countdown-number">@CountdownSeconds</div>
+                <p class="countdown-text">Think of the answer...</p>
+                <div class="countdown-emoji">🤔</div>
+            </div>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(Feedback))
+            {
+                <div class="feedback @(IsCorrect ? "success" : "error")">
+                    @if (IsCorrect)
+                    {
+                        <span class="celebration-burst">
+                            <span class="emoji-bounce">🎉</span>
+                            <span class="emoji-bounce emoji-delay-1">⭐</span>
+                            <span class="emoji-bounce emoji-delay-2">🌟</span>
+                        </span>
+                    }
+                    @Feedback
+                    @if (IsCorrect)
+                    {
+                        <span class="celebration-burst">
+                            <span class="emoji-bounce emoji-delay-3">✨</span>
+                            <span class="emoji-bounce emoji-delay-4">🎊</span>
+                        </span>
+                    }
+                </div>
+            }
+
+            <div class="games-grid" style="grid-template-columns: repeat(2, 1fr);">
+                @foreach (var answer in Answers)
+                {
+                    <button class="answer-btn @GetAnswerClass(answer)" 
+                            @onclick="() => CheckAnswer(answer)"
+                            disabled="@AnswerSelected">
+                        @answer
+                    </button>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="question-card game-over-card">
+            <span class="card-emoji-corner top-left emoji-dance">🎉</span>
+            <span class="card-emoji-corner top-right emoji-dance emoji-delay-2">🎊</span>
+            <h2 style="color: #333;">
+                <span class="emoji-bounce">🎉</span> 
+                Game Over! 
+                <span class="emoji-bounce emoji-delay-1">🎉</span>
+            </h2>
+            <p class="question-text">You got @Score out of @TotalQuestions correct!</p>
+            <p style="font-size: 1.5rem; color: #666;">
+                @if (Score == TotalQuestions)
+                {
+                    <span class="celebration-burst">
+                        <span class="emoji-dance">🏆</span>
+                        <span class="emoji-bounce">⭐</span>
+                        <span class="emoji-spin">🌟</span>
+                    </span>
+                    <span>Perfect score! You're a math superstar!</span>
+                    <span class="celebration-burst">
+                        <span class="emoji-spin">✨</span>
+                        <span class="emoji-bounce">🎯</span>
+                        <span class="emoji-dance">👑</span>
+                    </span>
+                }
+                else if (Score >= TotalQuestions * 0.7)
+                {
+                    <span class="emoji-bounce">🌟</span>
+                    <span>Great job! Keep practicing!</span>
+                    <span class="emoji-bounce emoji-delay-1">🌟</span>
+                }
+                else
+                {
+                    <span class="emoji-pulse">💪</span>
+                    <span>Good effort! Try again!</span>
+                    <span class="emoji-pulse emoji-delay-1">💪</span>
+                }
+            </p>
+            <button class="btn-game btn-arithmetic" @onclick="StartNewGameAsync" style="margin-top: 1rem;">
+                Play Again! <span class="btn-emoji">🚀</span>
+            </button>
+            <button class="btn-game btn-topography" @onclick="GoHome" style="margin-top: 1rem; margin-left: 1rem;">
+                Back Home <span class="btn-emoji">🏠</span>
+            </button>
+            <span class="card-emoji-corner bottom-left emoji-dance emoji-delay-3">🥳</span>
+            <span class="card-emoji-corner bottom-right emoji-dance emoji-delay-4">🎈</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    private string Question { get; set; } = "";
+    private List<int> Answers { get; set; } = [];
+    private int CorrectAnswer { get; set; }
+    private int Score { get; set; }
+    private int CurrentQuestion { get; set; }
+    private int TotalQuestions { get; set; } = 10;
+    private bool GameOver { get; set; }
+    private string Feedback { get; set; } = "";
+    private bool IsCorrect { get; set; }
+    private bool AnswerSelected { get; set; }
+    private int? SelectedAnswer { get; set; }
+    private bool IsCountingDown { get; set; }
+    private int CountdownSeconds { get; set; }
+
+    private Random _random = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StartNewGameAsync();
+    }
+
+    private async Task StartNewGameAsync()
+    {
+        Score = 0;
+        CurrentQuestion = 0;
+        GameOver = false;
+        Feedback = "";
+        await GenerateQuestionAsync();
+    }
+
+    private async Task GenerateQuestionAsync()
+    {
+        CurrentQuestion++;
+        AnswerSelected = false;
+        SelectedAnswer = null;
+        Feedback = "";
+
+        if (CurrentQuestion > TotalQuestions)
+        {
+            GameOver = true;
+            return;
+        }
+
+        int num1 = _random.Next(1, 13);
+        int num2 = _random.Next(1, 13);
+        int operation = _random.Next(0, 4);
+
+        switch (operation)
+        {
+            case 0: // Addition
+                Question = $"{num1} + {num2} = ?";
+                CorrectAnswer = num1 + num2;
+                break;
+            case 1: // Subtraction
+                if (num1 < num2) (num1, num2) = (num2, num1);
+                Question = $"{num1} - {num2} = ?";
+                CorrectAnswer = num1 - num2;
+                break;
+            case 2: // Multiplication
+                Question = $"{num1} × {num2} = ?";
+                CorrectAnswer = num1 * num2;
+                break;
+            case 3: // Division
+                CorrectAnswer = num1;
+                int product = num1 * num2;
+                Question = $"{product} ÷ {num2} = ?";
+                break;
+        }
+
+        GenerateAnswerOptions();
+        await StartCountdownAsync();
+    }
+
+    private async Task StartCountdownAsync()
+    {
+        IsCountingDown = true;
+        CountdownSeconds = 3;
+        StateHasChanged();
+
+        while (CountdownSeconds > 0)
+        {
+            await Task.Delay(1000);
+            CountdownSeconds--;
+            StateHasChanged();
+        }
+
+        IsCountingDown = false;
+        StateHasChanged();
+    }
+
+    private void GenerateAnswerOptions()
+    {
+        var answers = new HashSet<int> { CorrectAnswer };
+        
+        while (answers.Count < 4)
+        {
+            int offset = _random.Next(-10, 11);
+            if (offset != 0)
+            {
+                int wrongAnswer = CorrectAnswer + offset;
+                if (wrongAnswer >= 0)
+                {
+                    answers.Add(wrongAnswer);
+                }
+            }
+        }
+
+        Answers = answers.OrderBy(_ => _random.Next()).ToList();
+    }
+
+    private async Task CheckAnswer(int answer)
+    {
+        if (AnswerSelected) return;
+
+        AnswerSelected = true;
+        SelectedAnswer = answer;
+        IsCorrect = answer == CorrectAnswer;
+
+        if (IsCorrect)
+        {
+            Score++;
+            Feedback = "🎉 Correct! Great job!";
+        }
+        else
+        {
+            Feedback = $"❌ Oops! The answer was {CorrectAnswer}";
+        }
+
+        await Task.Delay(1500);
+        await GenerateQuestionAsync();
+    }
+
+    private string GetAnswerClass(int answer)
+    {
+        if (!AnswerSelected) return "";
+        if (answer == SelectedAnswer)
+        {
+            return IsCorrect ? "correct" : "incorrect";
+        }
+        if (answer == CorrectAnswer)
+        {
+            return "correct";
+        }
+        return "";
+    }
+
+    private void GoHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+}
